@@ -2,8 +2,8 @@ let camera, scene, renderer;
 let geometry, material, mesh;
 let floor, floorMaterial, floorMesh;
 
-init();
 
+init();
 function init() {
 
     scene = new THREE.Scene();
@@ -30,35 +30,16 @@ function init() {
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.setAnimationLoop( animation );
     document.body.appendChild( renderer.domElement );
-
-    // var ambientLight = new THREE.AmbientLight(0x090909);
-    // scene.add(ambientLight);
-
 }
 
 function animation( time ) {
 
     var x = camera.position.x;
     var z = camera.position.z;
-
     var rotSpeed = 0.001;
     camera.position.x = x * Math.cos(rotSpeed) + z * Math.sin(rotSpeed);
     camera.position.z = z * Math.cos(rotSpeed) - x * Math.sin(rotSpeed);
-
     camera.lookAt(scene.position);
 
-    // // camera.position = new THREE.Vector3(Math.cos(time/10000), 0.3, Math.sin(time/10000));
-    // camera.rotateOnAxis(new THREE.Vector3(0,1,0), time/100);
-    // // console.log(time);
-    // camera.lookAt(new THREE.Vector3( 0, .3, 1 ));
-
-    // mesh.rotation.x = time / 2000;
-    // mesh.rotation.y = time / 1000;
-
     renderer.render( scene, camera );
-
-
-    
-
-    // requestAnimationFrame(animation);
 }
