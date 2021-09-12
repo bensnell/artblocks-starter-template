@@ -1,6 +1,7 @@
 let camera, scene, renderer;
 let geometry, material, mesh;
 let floor, floorMaterial, floorMesh;
+let tree;
 
 // --------- RANDOMNESS ------------
 
@@ -88,31 +89,153 @@ function lerpAngle(a, b, amt) {
 
 // --------- CLASSES ------------
 
+class Node {
+	constructor() {
+
+		// Is this part of the tree living?
+		this.alive = true;
+		// Is this node capable of collecting water or sun?
+		this.receptive = true;
+
+		// Absolute position (in global space)
+		this.position = new THREE.Vector3();
+		// Normalized heading
+		this.heading = new THREE.Vector3();
+
+		// Vector from last node to this node
+		this.lastSegment = new THREE.Vector3();
+		// Length from last node to this node
+		this.lastSegmentLength = 0;
+		// Cumulative distance to the origin
+		this.cumulativeDistanceToOrigin = 0;
+
+		// Aboslute distance to the origin
+		this.distanceToOrigin = 0;
+		
+		// # nodes to origin
+		this.nodesToOrigin = 0;
+		// How many years did this not grow, while it was receptive?
+		this.stagnantYears = 0; // TODO
+
+		// Radius of segment
+		this.segmentRadius = 0;
+
+		// Radius of the receptiveness (foliage for above ground nodes)
+		this.receptiveRadius = 0;
+
+		// Children nodes
+		this.next = [];
+		// Parent node
+		this.prev = null;
+
+		// A reference to the tree
+		this._tree = null;
+	}
+	age() { return this._tree.age - this.nodesToOrigin; }
+	siblings() { // including self
+		return this.prev == null ? [] : this.prev.next;
+	}
+	// Update all properties that depend on a new position and heading
+	// (Assumed: a new position, heading, segmentRadius, and receptiveRadius 
+	// 		have been set)
+	updatePropertiesFromNewPosition() {
+		
+		// Set the last segment
+		this.lastSegment = this.position - this.prev.position;
+		this.lastSegmentLength = this.lastSegment.length();
+		// Update cumulative distance
+		this.cumulativeDistanceToOrigin = this.prev.cumulativeDistanceToOrigin + 
+			this.lastSegmentLength;
+		
+		// TODO: Should foliage be treated as a linear quantity or an area or volume?
+		// e.g. pow(nodes.length, 1 or 2 or 3); 
+		// this.receptiveRadius = this.prev.receptiveRadius / this.siblings.length(); 
+
+		// Update the max tree radius
+		this.distanceToOrigin = this.position.length();
+		this._tree.radius = max(this._tree.radius, this.distanceToOrigin);
+	}
+};
+
 class Tree {
 	constructor() {
-		this.origin = new THREE.Vector3();
+
+		// nexus of branches and roots (constant)
+		this.origin = new THREE.Vector3(); 
+
+		// Age of the tree in years
+		this.age = 0;
+
+		// Branch segments
+		this.branches = new Node();
+		this.branches.heading.set(0,1,0);
+		// Root segments
+		this.roots = new Node();
+		this.roots.heading.set(0,-1,0);
+
+		// Bounds (updated every time positions are added)
 		this.loBounds = new THREE.Vector3();
 		this.hiBounds = new THREE.Vector3();
+		// The max radius of any points added
+		this.radius = 0;
+	}
+	// Get a number of leaves or root caps split out from this node
+	getNewLeaves(branchNode, n) {
+		return this._getNewNodes(branchNode, n);
+	}
+	getNewCaps(rootNode, n) {
+		return this._getNewNodes(rootNode, n);
+	}
+	// Get a number of nodes from this parentNode, pre-linked
+	_getNewNodes(parent, n) {
+		for (var i = 0; i < n; i++) {
+			var n = new Node();
+			// Link original tree
+			n._tree = this;
+			// Link to parent
+			parent.next.push(n);
+			// Link parent to this
+			n.prev = parent;
+			// Update the number of nodes to origin
+			n.nodesToOrigin = parent.nodesToOrigin + 1;
+		}
+		// The parent segment is no longer receptive
+		parent.receptive = false;		
 	}
 	centroid() {
-		return this.loBounds.lerp(this.hiBounds, 0.5);
+		return this.loBounds.clone().lerp(this.hiBounds, 0.5);
 	}
 	maxRadius() {
-		return 0;
+		return Math.max(this.loBounds.x, this.loBounds.y, this.lo)
+	}
+	update() {
+		// Increase the age
+		this.age++;
+		// Progress the tree through one year (+ seasons)
+		this._growLeaves();
+		this._growCaps();
+		this._dieback();
+	}
+	_growLeaves() {
+
+	}
+	_growCaps() {
+
+	}
+	_dieback() {
+		
 	}
 	
 
 
 };
 
+// --------- RENDERING ------------
 
 init();
 function init() {
 
-	var x = new THREE.Vector3(0,0,0);
-	var y = new THREE.Vector3(1,1,1);
-	var z = x.clone().lerp(y, 0.5);
-	console.log(x, y, z);
+	tree = new Tree();
 
 	scene = new THREE.Scene();
 
@@ -141,6 +264,8 @@ function init() {
 }
 
 function animation( time ) {
+
+	tree.update();
 
 	var x = camera.position.x;
 	var z = camera.position.z;
