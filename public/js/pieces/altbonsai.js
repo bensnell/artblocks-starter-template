@@ -1,7 +1,7 @@
 let camera, scene, renderer;
 let geometry, material, mesh;
 let floor, floorMaterial, floorMesh;
-let tree;
+let tree, climate;
 
 // --------- RANDOMNESS ------------
 
@@ -88,6 +88,25 @@ function lerpAngle(a, b, amt) {
 }
 
 // --------- CLASSES ------------
+
+class Climate {
+	constructor() {};
+
+	// Amount of sunlight [0, 1]
+	sun = 1;
+	// Sun range
+	sunRange = [0.7, 1];
+
+	// Amount of rainfall [0, 1]
+	water = 1;
+	// Water range
+	waterRange = [0.7, 1];
+
+	update() {
+		this.sun = R.random_num(this.sunRange[0], this.sunRange[1]);
+		this.water = R.random_num(this.waterRange[0], this.waterRange[1]);
+	}
+}
 
 class Node {
 	constructor() {
@@ -236,6 +255,7 @@ init();
 function init() {
 
 	tree = new Tree();
+	climate = new Climate();
 
 	scene = new THREE.Scene();
 
@@ -265,6 +285,7 @@ function init() {
 
 function animation( time ) {
 
+	climate.update();
 	tree.update();
 
 	var x = camera.position.x;
