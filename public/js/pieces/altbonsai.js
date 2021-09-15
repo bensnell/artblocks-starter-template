@@ -87,6 +87,180 @@ function lerpAngle(a, b, amt) {
   return lerpWrapped(a, b, amt, TWO_PI);
 }
 
+// --------- OCTREE ------------
+
+// Code borrowed using MIT License from here:
+// https://raw.githubusercontent.com/maxharris9/octree
+// https://raw.githubusercontent.com/maxharris9/octify-aabb
+
+/*
+
+Coordinate System:
+ ^ Y
+ |
+ |     X
+(•)----->
+ Z
+
++-----------------+-----------------+
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|d (-1,0,-1)      |c (0,0,-1)       |
++-----------------+-----------------+
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|a (-1,-1,-1)     |b (0,-1,-1)      |
++-----------------+-----------------+
+
+
+                   h (0,1,0)         g (1,1,0)
++-----------------+-----------------+
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|k (-1,0,0)       |e (0,0,0)        |f (1,0,0)
++-----------------+-----------------+
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|i (-1,-1,0)      |j (0,-1,0)       |
++-----------------+-----------------+
+
+
+                   o (0,1,1)         n (1,1,1)
++-----------------+-----------------+
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |l (0,0,1)        |m (1,0,1)
++-----------------+-----------------+
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
+|                 |                 |
++-----------------+-----------------+
+*/
+
+// AABB stands for axis-aligned bounding box
+function octifyAabb (box) {
+  var width = (box[1][0] - box[0][0])/2;
+  var height = (box[1][1] - box[0][1])/2;
+  var center = [
+		(box[1][0] + box[0][0])/2, 
+		(box[1][1] + box[0][1])/2, 
+		(box[1][2] + box[0][2])/2];
+
+  var a = box[0];
+  var b = [(box[0][0] + width), box[0][1], box[0][2]];
+  var c = [(box[0][0] + width), (box[0][1] + height), box[0][2]];
+  var d = [box[0][0], (box[0][1] + height), box[0][2]];
+
+  var e = center;
+  var f = [center[0] + width, center[1], center[2]];
+  var g = [center[0] + width, center[1] + height, center[2]];
+  var h = [center[0], center[1] + height, center[2]];
+
+  var i = [center[0] - width, center[1] - height, center[2]];
+  var j = [center[0], center[1] - height, center[2]];
+  var k = [center[0] - width, center[1], center[2]];
+
+  var l = [center[0], center[1], box[1][2]];
+  var m = [center[0] + width, center[1], box[1][2]];
+  var n = box[1];
+  var o = [center[0], center[1] + height, box[1][2]];
+
+  return [[a,e], [b,f], [c,g], [d,h],
+          [i,l], [j,m], [e,n], [k,o]];
+}
+
+function boxContains(box, point) {
+	return ((point[0] >= box[0][0] && point[0] <= box[1][0]) &&
+					(point[1] >= box[0][1] && point[1] <= box[1][1]) &&
+					(point[2] >= box[0][2] && point[2] <= box[1][2]));
+};
+
+class Octant {
+	constructor(box) {
+		this.children = new Array(8);
+		this.aabb = box;
+		this.isLeaf = true;
+		this.solid = false;
+		this.width = Math.abs(box[0][0] - box[1][0]);
+		// do we want to permit non-cubic octants?
+		// this.height = (box[0][1] - box[1][1])/2; 
+	};
+
+	subdivide() {
+		var x = octifyAabb(this.aabb);
+	
+		// TODO: warn if overwriting children
+		for (var i = 0; i < x.length; i++) {
+			this.children[i] = new Octant(x[i])
+		}
+	
+		this.isLeaf = false;
+		this.solid = false;
+	};
+
+	insert(point, width) {
+		var inside = boxContains(this.aabb, point);
+		var tooBig = this.width > width;
+	
+		if (inside && tooBig) {
+			if (this.isLeaf) {
+				this.subdivide();
+			}
+	
+			for (var i = 0; i < this.children.length; i++) {
+				this.children[i].insert(point, width);
+			}
+		}
+		else if (inside && !tooBig) {
+			this.solid = true;
+		}
+	};
+
+	// Does a ray intersect with any solid boxes (containing points)?
+	intersects(ray) {
+		var inter = ray.intersects(this.aabb, true);
+		if (!inter) { return; }
+	
+		if (!this.isLeaf) {
+			for (var i = 0; i < this.children.length; i++) {
+				if (this.children[i].isLeaf && !this.children[i].solid) { continue; }
+	
+				if (this.children[i].intersects(ray)) return true;
+			}
+		}
+		else {
+			if (inter && this.solid) {
+				return true;
+			}
+		}
+	};
+}
+
+// TODO: 
+// - Understand octree
+// - Visualize Octree
+// - What additional functionality is necessary?
+// - Implement additional functionality
+
+
 // --------- CLASSES ------------
 
 class Climate {
