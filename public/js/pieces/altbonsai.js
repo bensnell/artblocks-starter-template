@@ -435,7 +435,7 @@ function init() {
 
 	camera = new THREE.PerspectiveCamera( 70, 
 		window.innerWidth / window.innerHeight, 0.01, 10 );
-	camera.position.set(0, 0.3, 3);
+	camera.position.set(0, 1, 3);
 	// camera.lookAt(new THREE.Vector3(0,0.3,0));
 	camera.lookAt(scene.position);
 	
@@ -467,7 +467,9 @@ function animation( time ) {
 	var rotSpeed = 0.001;
 	camera.position.x = x * Math.cos(rotSpeed) + z * Math.sin(rotSpeed);
 	camera.position.z = z * Math.cos(rotSpeed) - x * Math.sin(rotSpeed);
-	camera.lookAt(scene.position);
+	var lookAt  = scene.position.clone();
+	lookAt.add(new THREE.Vector3(0,1,0));
+	camera.lookAt(lookAt);
 
 	renderer.render( scene, camera );
 }
