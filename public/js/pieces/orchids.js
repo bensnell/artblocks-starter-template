@@ -269,7 +269,8 @@ function init() {
 function animation( time ) {
 
 	
-	param = (M.cos(2*PI*(time%5000)/5000)+1)/2;
+	param = (M.cos(2*PI*(time%5000)/5000)+1)/2; // [0, 1]
+	// param = M.cos(2*PI*(time%10000)/10000); // [-1, 1]
 	petals.forEach(p => p.update(param));
 	
 
