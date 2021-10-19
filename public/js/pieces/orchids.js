@@ -5,11 +5,14 @@ let tree, climate;
 
 
 var T = THREE;
-const PI = Math.PI;
+var M = Math;
+const PI = M.PI;
 
-function v3(x,y,z){
-	return new T.Vector3(x,y,z);
+function v3(x,y,z) { 
+	if (x==null) x=y=z=0;
+	return new T.Vector3(x,y,z); 
 }
+
 
 
 // --------- RANDOMNESS ------------
@@ -42,11 +45,19 @@ function clamp(a, lo, hi) {
     lo = hi;
     hi = lo;
   }
-  return Math.max(Math.min(a, hi), lo);
+  return M.max(M.min(a, hi), lo);
 }
 
 function lerp(a, b, amt) {
 	return (b-a)*amt + a;
+}
+// Lerp range
+function lr(r, amt) {
+	return lerp(r[0], r[1], amt);
+}
+
+function v2l(v) {
+	return [v.x,v.y,v.z];
 }
 
 function map(a, il, ih, ol, oh, c) {
@@ -58,15 +69,15 @@ function map(a, il, ih, ol, oh, c) {
 
 // Get a wrapped angle in radians (confined to [0, span])
 function wrap(a, span) {
-  return (a + (Math.ceil(Math.abs(a/span))+1)*span)%span;
+  return (a + (M.ceil(M.abs(a/span))+1)*span)%span;
 }
 
 function _prepareWrappedComparison(a, b, span) {
   var flip = false;
   a = wrap(a, span);
   b = wrap(b, span);
-  var lo = Math.min(a, b);
-  var hi = Math.max(a, b);
+  var lo = M.min(a, b);
+  var hi = M.max(a, b);
   if (a == hi) flip = !flip;
   if (hi-lo > span/2) {
     var tmp = hi-span;
@@ -89,7 +100,7 @@ function minDifference(a, b, span) {
 function lerpWrapped(a, b, amt, span) {
   var [lo, hi, flip] = _prepareWrappedComparison(a, b, span);
   if (flip) amt = 1.0-amt;
-  return wrap(Math.lerp(lo, hi, amt), span);
+  return wrap(lerp(lo, hi, amt), span);
 }
 
 function lerpAngle(a, b, amt) {
@@ -108,19 +119,17 @@ class Petal {
 		vertexColors: true
 	} );
 
-	create(origin, axis, up, length, ratioRange, alphaRange, beta) {
+	create(origin, axis, up, length, width, ratioRange, alphaRange, beta) {
 		var _ = this;
-
-		_.origin = origin;
-		_.axis = axis;
-		_.up = up;
+		_.o = origin;
+		_.x = axis;
+		_.u = up;
 		_.l = length;
+		_.w = width;
 		_.r = ratioRange;
 		_.a = alphaRange;
 		_.b = beta;
-		
 		_.init();
-
 		_.update(0);
 	}
 
@@ -142,7 +151,9 @@ class Petal {
 		idx.forEach(i => _.indices.push(...i));
 
 		_.geo.setIndex( _.indices );
-		_.geo.setAttribute( 'position', new T.Float32BufferAttribute( _.vertices, 3 ) );
+		var posAttr = new T.Float32BufferAttribute( _.vertices, 3 );
+		posAttr.setUsage(T.StreamDrawUsage);
+		_.geo.setAttribute( 'position',  posAttr);
 		_.geo.setAttribute( 'normal', new T.Float32BufferAttribute( _.normals, 3 ) );
 		var colorAttr = new T.Float32BufferAttribute( _.colors, 3 );
 		colorAttr.setUsage(T.StreamDrawUsage);
@@ -153,6 +164,36 @@ class Petal {
 	update(param) {
 		var _ = this;
 
+		var scale = clamp(param+1,0,1);
+		param = M.max(0,param);
+
+		// Calculate lerped values
+		var l = _.l*scale;
+		var r = lr(_.r, param);
+		var a = lr(_.a, param);
+		var b = lerp(-2*_.a[0], _.b, param);
+		var g = _.w/(2*l*r*M.sin(a)) * (param/2+0.5);
+
+
+		// Update positions of top petal
+		
+		
+		_.geo.attributes.position.setXYZ(0, ...v2l(_.o));
+
+		var perp = v3().crossVectors(_.x, _.u);
+		var p2 = _.x.clone().multiplyScalar(l*r).applyAxisAngle(perp, a);
+		_.geo.attributes.position.setXYZ(2, ...v2l(p2));
+
+		var p1 = p2.clone().applyAxisAngle(_.x, g);
+		_.geo.attributes.position.setXYZ(1, ...v2l(p1));
+
+		var p3 = p2.clone().applyAxisAngle(_.x, -g);
+		_.geo.attributes.position.setXYZ(3, ...v2l(p3));
+
+		var p4 = p2.clone().applyAxisAngle(perp, b).setLength(l*(1-r)).add(p2);
+		_.geo.attributes.position.setXYZ(4, ...v2l(p4));
+
+
 		_.geo.attributes.color.setXYZ(0, 1, 0, param);
 		_.geo.attributes.color.setXYZ(1, 1, 1, param);
 		_.geo.attributes.color.setXYZ(2, 1, 1, param);
@@ -160,6 +201,7 @@ class Petal {
 		_.geo.attributes.color.setXYZ(4, 0, 1, param);
 
 		_.geo.attributes.color.needsUpdate = true;
+		_.geo.attributes.position.needsUpdate = true;
 	}
 }
 
@@ -179,13 +221,13 @@ function init() {
 	camera.lookAt(scene.position);
 	
 
-	geometry = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
-	material = new THREE.MeshNormalMaterial();
-	mesh = new THREE.Mesh( geometry, material );
-	scene.add( mesh );
+	// geometry = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
+	// material = new THREE.MeshNormalMaterial();
+	// mesh = new THREE.Mesh( geometry, material );
+	// scene.add( mesh );
 
 	floor = new THREE.CylinderGeometry(1, 1, 0.01, 64);
-	floorMaterial = new THREE.MeshBasicMaterial({color: 0xffff00});
+	floorMaterial = new THREE.MeshBasicMaterial({color: 0x222222});
 	floorMesh = new THREE.Mesh(floor, floorMaterial);
 	scene.add(floorMesh);
 
@@ -203,14 +245,13 @@ function init() {
 
 	petal = new Petal();
 	petal.create(
-		v3(0,0,0),
-		v3(1,0,0),
+		v3(0,0.1,0),
+		v3(0,0,1),
 		v3(0,1,0),
-		0.5,
-		0.5,
-		2/3,
-		PI/10,
-		PI/3,
+		1,
+		1,
+		[0.5,2/3],
+		[PI/10,PI/3],
 		PI/3
 	);
 	scene.add(petal.mesh);
@@ -223,7 +264,9 @@ function init() {
 
 function animation( time ) {
 
-	if (petal) petal.update(Math.abs((time%2000)/1000-1));//(time%1000)/1000);
+	
+	param = (M.cos(2*PI*(time%5000)/5000)+1)/2;
+	if (petal) petal.update(param);
 
 	var x = camera.position.x;
 	var z = camera.position.z;
