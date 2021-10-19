@@ -174,25 +174,17 @@ class Petal {
 		var b = lerp(-2*_.a[0], _.b, param);
 		var g = _.w/(2*l*r*M.sin(a)) * (param/2+0.5);
 
-
 		// Update positions of top petal
-		
-		
-		_.geo.attributes.position.setXYZ(0, ...v2l(_.o));
-
 		var perp = v3().crossVectors(_.x, _.u);
 		var p2 = _.x.clone().multiplyScalar(l*r).applyAxisAngle(perp, a);
-		_.geo.attributes.position.setXYZ(2, ...v2l(p2));
-
-		var p1 = p2.clone().applyAxisAngle(_.x, g);
-		_.geo.attributes.position.setXYZ(1, ...v2l(p1));
-
-		var p3 = p2.clone().applyAxisAngle(_.x, -g);
-		_.geo.attributes.position.setXYZ(3, ...v2l(p3));
-
-		var p4 = p2.clone().applyAxisAngle(perp, b).setLength(l*(1-r)).add(p2);
-		_.geo.attributes.position.setXYZ(4, ...v2l(p4));
-
+		[ _.o, 
+			p2.clone().applyAxisAngle(_.x, g),
+			p2,
+			p2.clone().applyAxisAngle(_.x, -g),
+			p2.clone().applyAxisAngle(perp, b).setLength(l*(1-r)).add(p2)
+		].forEach((p,i) => {
+			_.geo.attributes.position.setXYZ(i, ...v2l(p));
+		})
 
 		_.geo.attributes.color.setXYZ(0, 1, 0, param);
 		_.geo.attributes.color.setXYZ(1, 1, 1, param);
@@ -219,12 +211,6 @@ function init() {
 	camera.position.set(0, 1, 3);
 	// camera.lookAt(new THREE.Vector3(0,0.3,0));
 	camera.lookAt(scene.position);
-	
-
-	// geometry = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
-	// material = new THREE.MeshNormalMaterial();
-	// mesh = new THREE.Mesh( geometry, material );
-	// scene.add( mesh );
 
 	floor = new THREE.CylinderGeometry(1, 1, 0.01, 64);
 	floorMaterial = new THREE.MeshBasicMaterial({color: 0x222222});
