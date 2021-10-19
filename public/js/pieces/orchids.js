@@ -102,6 +102,12 @@ class Petal {
 	normals = [];
 	colors = [];
 
+	geo = new T.BufferGeometry();
+	mat = new T.MeshPhongMaterial( {
+		side: T.DoubleSide,
+		vertexColors: true
+	} );
+
 	create(origin, axis, up, length, ratioRange, alphaRange, beta) {
 		var _ = this;
 
@@ -113,59 +119,13 @@ class Petal {
 		_.a = alphaRange;
 		_.b = beta;
 		
-		_.build();
+		_.init();
+
+		_.update(0);
 	}
 
-	build() {
+	init() {
 		var _ = this;
-
-		const size = 20;
-		const segments = 10;
-
-		const halfSize = size / 2;
-		const segmentSize = size / segments;
-
-		// generate vertices, normals and color data for a simple grid geometry
-
-		for ( let i = 0; i <= segments; i ++ ) {
-
-			const y = ( i * segmentSize ) - halfSize;
-
-			for ( let j = 0; j <= segments; j ++ ) {
-
-				const x = ( j * segmentSize ) - halfSize;
-
-				_.vertices.push( x, - y, 0 );
-				_.normals.push( 0, 0, 1 );
-
-				const r = ( x / size ) + 0.5;
-				const g = ( y / size ) + 0.5;
-
-				_.colors.push( r, g, 1 );
-
-			}
-
-		}
-
-		// generate indices (data for element array buffer)
-
-		for ( let i = 0; i < segments; i ++ ) {
-
-			for ( let j = 0; j < segments; j ++ ) {
-
-				const a = i * ( segments + 1 ) + ( j + 1 );
-				const b = i * ( segments + 1 ) + j;
-				const c = ( i + 1 ) * ( segments + 1 ) + j;
-				const d = ( i + 1 ) * ( segments + 1 ) + ( j + 1 );
-
-				// generate two faces (triangles) per iteration
-
-				_.indices.push( a, b, d ); // face one
-				_.indices.push( b, c, d ); // face two
-
-			}
-
-		}
 
 		// for (var i = 0; i < 5; i++) {
 		// 	_.vertices.push( 0, 0, 0 );
@@ -174,35 +134,74 @@ class Petal {
 		// }
 
 		// var idx = [[2,3,0],[2,0,1],[2,1,4],[2,4,3]];
-		// idx.forEach(i => _.indicies.push(...i));
+		// idx.forEach(i => _.indices.push(...i));
 
-		_.geo = new T.BufferGeometry();
-		_.mat = new T.MeshPhongMaterial( {
-			side: T.DoubleSide,
-			vertexColors: true
-		} );
+
+		const size = 1;
+		const segments = 10;
+		const halfSize = size / 2;
+		const segmentSize = size / segments;
+		for ( let i = 0; i <= segments; i ++ ) {
+			const y = ( i * segmentSize ) - halfSize;
+			for ( let j = 0; j <= segments; j ++ ) {
+				const x = ( j * segmentSize ) - halfSize;
+				_.vertices.push( x, - y, 0 );
+				_.normals.push( 0, 0, 1 );
+				const r = ( x / size ) + 0.5;
+				const g = ( y / size ) + 0.5;
+				_.colors.push( r, g, 1 );
+			}
+		}
+		for ( let i = 0; i < segments; i ++ ) {
+			for ( let j = 0; j < segments; j ++ ) {
+				const a = i * ( segments + 1 ) + ( j + 1 );
+				const b = i * ( segments + 1 ) + j;
+				const c = ( i + 1 ) * ( segments + 1 ) + j;
+				const d = ( i + 1 ) * ( segments + 1 ) + ( j + 1 );
+				_.indices.push( a, b, d );
+				_.indices.push( b, c, d );
+			}
+		}
 
 		_.geo.setIndex( _.indices );
 		_.geo.setAttribute( 'position', new T.Float32BufferAttribute( _.vertices, 3 ) );
 		_.geo.setAttribute( 'normal', new T.Float32BufferAttribute( _.normals, 3 ) );
-		_.geo.setAttribute( 'color', new T.Float32BufferAttribute( _.colors, 3 ) );
-
+		var colorAttr = new T.Float32BufferAttribute( _.colors, 3 );
+		colorAttr.setUsage(T.StreamDrawUsage);
+		_.geo.setAttribute( 'color', colorAttr );
 		_.mesh = new T.Mesh( _.geo, _.mat );
 	}
 
+	update(param) {
+		var _ = this;
 
-	
-
-
-
+		const size = 1;
+		const segments = 10;
+		const halfSize = size / 2;
+		const segmentSize = size / segments;
+		for ( let i = 0; i <= segments; i ++ ) {
+			const y = ( i * segmentSize ) - halfSize;
+			for ( let j = 0; j <= segments; j ++ ) {
+				const x = ( j * segmentSize ) - halfSize;
+				const r = ( x / size ) + 0.5;
+				const g = ( y / size ) + 0.5;
+				// var index = segments*i+j;
+				// _.geo.attributes.color.array[index*3] = r;
+				// _.geo.attributes.color.array[index*3+1] = g;
+				// _.geo.attributes.color.array[index*3+2] = param;
+				_.geo.attributes.color.setXYZ(segments*i+j, r, g, param);
+			}
+		}
+		_.geo.attributes.color.needsUpdate = true;
+		// _.geo.needsUpdate = true;
+	}
 }
-
-
 
 
 // --------- RENDERING ------------
 
 init();
+var petal;
 function init() {
 
 	scene = new THREE.Scene();
@@ -236,8 +235,8 @@ function init() {
 
 
 
-	var p = new Petal();
-	p.create(
+	petal = new Petal();
+	petal.create(
 		v3(0,0,0),
 		v3(1,0,0),
 		v3(0,1,0),
@@ -248,8 +247,7 @@ function init() {
 		PI/3,
 		PI/3
 	);
-	scene.add(p.mesh);
-	console.log(p)
+	scene.add(petal.mesh);
 
 
 
@@ -258,6 +256,9 @@ function init() {
 }
 
 function animation( time ) {
+
+	// console.log();
+	if (petal) petal.update((time%1000)/1000);//(time%1000)/1000);
 
 	var x = camera.position.x;
 	var z = camera.position.z;
