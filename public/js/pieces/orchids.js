@@ -127,41 +127,19 @@ class Petal {
 	init() {
 		var _ = this;
 
-		// for (var i = 0; i < 5; i++) {
-		// 	_.vertices.push( 0, 0, 0 );
-		// 	_.normals.push( 0, 0, 1 );
-		// 	_.colors.push( 1, 0, 0 );
-		// }
+		_.vertices.push( 0, 0, 0 );
+		_.vertices.push( -1, 1, 0 );
+		_.vertices.push( 0, 1, 0 );
+		_.vertices.push( 1, 1, 0 );
+		_.vertices.push( 0, 2, 0 );
 
-		// var idx = [[2,3,0],[2,0,1],[2,1,4],[2,4,3]];
-		// idx.forEach(i => _.indices.push(...i));
-
-
-		const size = 1;
-		const segments = 10;
-		const halfSize = size / 2;
-		const segmentSize = size / segments;
-		for ( let i = 0; i <= segments; i ++ ) {
-			const y = ( i * segmentSize ) - halfSize;
-			for ( let j = 0; j <= segments; j ++ ) {
-				const x = ( j * segmentSize ) - halfSize;
-				_.vertices.push( x, - y, 0 );
-				_.normals.push( 0, 0, 1 );
-				const r = ( x / size ) + 0.5;
-				const g = ( y / size ) + 0.5;
-				_.colors.push( r, g, 1 );
-			}
+		for (var i = 0; i < 5; i++) {
+			_.normals.push( 0, 0, 1 );
+			_.colors.push( 1, 0, 0 );
 		}
-		for ( let i = 0; i < segments; i ++ ) {
-			for ( let j = 0; j < segments; j ++ ) {
-				const a = i * ( segments + 1 ) + ( j + 1 );
-				const b = i * ( segments + 1 ) + j;
-				const c = ( i + 1 ) * ( segments + 1 ) + j;
-				const d = ( i + 1 ) * ( segments + 1 ) + ( j + 1 );
-				_.indices.push( a, b, d );
-				_.indices.push( b, c, d );
-			}
-		}
+
+		var idx = [[2,3,0],[2,0,1],[2,1,4],[2,4,3]];
+		idx.forEach(i => _.indices.push(...i));
 
 		_.geo.setIndex( _.indices );
 		_.geo.setAttribute( 'position', new T.Float32BufferAttribute( _.vertices, 3 ) );
@@ -175,25 +153,13 @@ class Petal {
 	update(param) {
 		var _ = this;
 
-		const size = 1;
-		const segments = 10;
-		const halfSize = size / 2;
-		const segmentSize = size / segments;
-		for ( let i = 0; i <= segments; i ++ ) {
-			const y = ( i * segmentSize ) - halfSize;
-			for ( let j = 0; j <= segments; j ++ ) {
-				const x = ( j * segmentSize ) - halfSize;
-				const r = ( x / size ) + 0.5;
-				const g = ( y / size ) + 0.5;
-				// var index = segments*i+j;
-				// _.geo.attributes.color.array[index*3] = r;
-				// _.geo.attributes.color.array[index*3+1] = g;
-				// _.geo.attributes.color.array[index*3+2] = param;
-				_.geo.attributes.color.setXYZ(segments*i+j, r, g, param);
-			}
-		}
+		_.geo.attributes.color.setXYZ(0, 1, 0, param);
+		_.geo.attributes.color.setXYZ(1, 1, 1, param);
+		_.geo.attributes.color.setXYZ(2, 1, 1, param);
+		_.geo.attributes.color.setXYZ(3, 1, 1, param);
+		_.geo.attributes.color.setXYZ(4, 0, 1, param);
+
 		_.geo.attributes.color.needsUpdate = true;
-		// _.geo.needsUpdate = true;
 	}
 }
 
@@ -257,8 +223,7 @@ function init() {
 
 function animation( time ) {
 
-	// console.log();
-	if (petal) petal.update((time%1000)/1000);//(time%1000)/1000);
+	if (petal) petal.update(Math.abs((time%2000)/1000-1));//(time%1000)/1000);
 
 	var x = camera.position.x;
 	var z = camera.position.z;
