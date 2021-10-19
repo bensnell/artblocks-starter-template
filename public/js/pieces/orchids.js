@@ -108,6 +108,9 @@ function lerpAngle(a, b, amt) {
 }
 
 class Petal {
+	constructor(params){
+		this.create(params);
+	}
 	indices = [];
 	vertices = [];
 	normals = [];
@@ -119,16 +122,9 @@ class Petal {
 		vertexColors: true
 	} );
 
-	create(origin, axis, up, length, width, ratioRange, alphaRange, beta) {
+	create(params) {
 		var _ = this;
-		_.o = origin;
-		_.x = axis;
-		_.u = up;
-		_.l = length;
-		_.w = width;
-		_.r = ratioRange;
-		_.a = alphaRange;
-		_.b = beta;
+		Object.keys(params).forEach(k => _[k]=params[k]);
 		_.init();
 		_.update(0);
 	}
@@ -178,10 +174,10 @@ class Petal {
 		var perp = v3().crossVectors(_.x, _.u);
 		var p2 = _.x.clone().multiplyScalar(l*r).applyAxisAngle(perp, a);
 		[ _.o, 
-			p2.clone().applyAxisAngle(_.x, g),
-			p2,
-			p2.clone().applyAxisAngle(_.x, -g),
-			p2.clone().applyAxisAngle(perp, b).setLength(l*(1-r)).add(p2)
+			p2.clone().applyAxisAngle(_.x, g).add(_.o),
+			p2.clone().add(_.o),
+			p2.clone().applyAxisAngle(_.x, -g).add(_.o),
+			p2.clone().applyAxisAngle(perp, b).setLength(l*(1-r)).add(p2).add(_.o)
 		].forEach((p,i) => {
 			_.geo.attributes.position.setXYZ(i, ...v2l(p));
 		})
@@ -229,18 +225,40 @@ function init() {
 
 
 
-	petal = new Petal();
-	petal.create(
-		v3(0,0.1,0),
-		v3(0,0,1),
-		v3(0,1,0),
-		1,
-		1,
-		[0.5,2/3],
-		[PI/10,PI/3],
-		PI/3
-	);
-	scene.add(petal.mesh);
+	petals = [];
+	var template = {
+		'o':v3(0,1,0),
+		'x':v3(0,0,1),
+		'u':v3(0,1,0),
+		'l':1,
+		'w':0.8,
+		'r':[0.5,2/3],
+		'a':[PI/10,PI/3],
+		'b':PI/3
+	};
+	template.u = v3(0,1,0);
+	petals.push(new Petal(template));
+	template.u = v3(0.8,-0.2,0);
+	petals.push(new Petal(template));
+	template.u = v3(-0.8,-0.2,0);
+	petals.push(new Petal(template));
+
+	template.u = v3(0.5,0.5,0);
+	template.w = 0.8;
+	template.b = PI/2;
+	petals.push(new Petal(template));
+	template.u = v3(-0.5,0.5,0);
+	petals.push(new Petal(template));
+
+	template.u = v3(0,-1,0);
+	template.w = 1.5;
+	template.a = [PI/12,PI*0.28];
+	template.b = PI/3;
+	template.r = [0.5,0.75];
+	petals.push(new Petal(template));
+
+	petals.forEach(p => scene.add(p.mesh));
+	
 
 
 
@@ -252,7 +270,8 @@ function animation( time ) {
 
 	
 	param = (M.cos(2*PI*(time%5000)/5000)+1)/2;
-	if (petal) petal.update(param);
+	petals.forEach(p => p.update(param));
+	
 
 	var x = camera.position.x;
 	var z = camera.position.z;
