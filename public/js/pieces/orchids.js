@@ -3,6 +3,15 @@ let geometry, material, mesh;
 let floor, floorMaterial, floorMesh;
 let tree, climate;
 
+
+var T = THREE;
+const PI = Math.PI;
+
+function v3(x,y,z){
+	return new T.Vector3(x,y,z);
+}
+
+
 // --------- RANDOMNESS ------------
 
 class Random {
@@ -87,6 +96,109 @@ function lerpAngle(a, b, amt) {
   return lerpWrapped(a, b, amt, TWO_PI);
 }
 
+class Petal {
+	indices = [];
+	vertices = [];
+	normals = [];
+	colors = [];
+
+	create(origin, axis, up, length, ratioRange, alphaRange, beta) {
+		var _ = this;
+
+		_.origin = origin;
+		_.axis = axis;
+		_.up = up;
+		_.l = length;
+		_.r = ratioRange;
+		_.a = alphaRange;
+		_.b = beta;
+		
+		_.build();
+	}
+
+	build() {
+		var _ = this;
+
+		const size = 20;
+		const segments = 10;
+
+		const halfSize = size / 2;
+		const segmentSize = size / segments;
+
+		// generate vertices, normals and color data for a simple grid geometry
+
+		for ( let i = 0; i <= segments; i ++ ) {
+
+			const y = ( i * segmentSize ) - halfSize;
+
+			for ( let j = 0; j <= segments; j ++ ) {
+
+				const x = ( j * segmentSize ) - halfSize;
+
+				_.vertices.push( x, - y, 0 );
+				_.normals.push( 0, 0, 1 );
+
+				const r = ( x / size ) + 0.5;
+				const g = ( y / size ) + 0.5;
+
+				_.colors.push( r, g, 1 );
+
+			}
+
+		}
+
+		// generate indices (data for element array buffer)
+
+		for ( let i = 0; i < segments; i ++ ) {
+
+			for ( let j = 0; j < segments; j ++ ) {
+
+				const a = i * ( segments + 1 ) + ( j + 1 );
+				const b = i * ( segments + 1 ) + j;
+				const c = ( i + 1 ) * ( segments + 1 ) + j;
+				const d = ( i + 1 ) * ( segments + 1 ) + ( j + 1 );
+
+				// generate two faces (triangles) per iteration
+
+				_.indices.push( a, b, d ); // face one
+				_.indices.push( b, c, d ); // face two
+
+			}
+
+		}
+
+		// for (var i = 0; i < 5; i++) {
+		// 	_.vertices.push( 0, 0, 0 );
+		// 	_.normals.push( 0, 0, 1 );
+		// 	_.colors.push( 1, 0, 0 );
+		// }
+
+		// var idx = [[2,3,0],[2,0,1],[2,1,4],[2,4,3]];
+		// idx.forEach(i => _.indicies.push(...i));
+
+		_.geo = new T.BufferGeometry();
+		_.mat = new T.MeshPhongMaterial( {
+			side: T.DoubleSide,
+			vertexColors: true
+		} );
+
+		_.geo.setIndex( _.indices );
+		_.geo.setAttribute( 'position', new T.Float32BufferAttribute( _.vertices, 3 ) );
+		_.geo.setAttribute( 'normal', new T.Float32BufferAttribute( _.normals, 3 ) );
+		_.geo.setAttribute( 'color', new T.Float32BufferAttribute( _.colors, 3 ) );
+
+		_.mesh = new T.Mesh( _.geo, _.mat );
+	}
+
+
+	
+
+
+
+}
+
+
+
 
 // --------- RENDERING ------------
 
@@ -124,78 +236,24 @@ function init() {
 
 
 
+	var p = new Petal();
+	p.create(
+		v3(0,0,0),
+		v3(1,0,0),
+		v3(0,1,0),
+		0.5,
+		0.5,
+		2/3,
+		PI/10,
+		PI/3,
+		PI/3
+	);
+	scene.add(p.mesh);
+	console.log(p)
 
 
-	const petal = new THREE.BufferGeometry();
 
-	const indices = [];
 
-	const vertices = [];
-	const normals = [];
-	const colors = [];
-
-	const size = 1;
-	const segments = 10;
-
-	const halfSize = size / 2;
-	const segmentSize = size / segments;
-
-	// generate vertices, normals and color data for a simple grid geometry
-
-	for ( let i = 0; i <= segments; i ++ ) {
-
-		const y = ( i * segmentSize ) - halfSize;
-
-		for ( let j = 0; j <= segments; j ++ ) {
-
-			const x = ( j * segmentSize ) - halfSize;
-
-			vertices.push( x, - y, 0 );
-			normals.push( 0, 0, 1 );
-
-			const r = ( x / size ) + 0.5;
-			const g = ( y / size ) + 0.5;
-
-			colors.push( r, g, 1 );
-
-		}
-
-	}
-
-	// generate indices (data for element array buffer)
-
-	for ( let i = 0; i < segments; i ++ ) {
-
-		for ( let j = 0; j < segments; j ++ ) {
-
-			const a = i * ( segments + 1 ) + ( j + 1 );
-			const b = i * ( segments + 1 ) + j;
-			const c = ( i + 1 ) * ( segments + 1 ) + j;
-			const d = ( i + 1 ) * ( segments + 1 ) + ( j + 1 );
-
-			// generate two faces (triangles) per iteration
-
-			indices.push( a, b, d ); // face one
-			indices.push( b, c, d ); // face two
-
-		}
-
-	}
-
-	//
-
-	petal.setIndex( indices );
-	petal.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
-	petal.setAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ) );
-	petal.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
-
-	const petalMaterial = new THREE.MeshPhongMaterial( {
-		side: THREE.DoubleSide,
-		vertexColors: true
-	} );
-
-	mesh = new THREE.Mesh( petal, petalMaterial );
-	scene.add( mesh );
 
 }
 
